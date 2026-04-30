@@ -100,23 +100,15 @@ export default function DeckBuilder({
 
   const { leaders, bases, mainTotal, errors, isValid } = useDeckValidation(cards);
 
-  // Derive leader aspects from raw_data
-  const leaderAspects: string[] = (() => {
-    if (leaders.length !== 1) return [];
-    // aspects are not in our DeckCard type — fetch via suggestion
-    return [];
-  })();
+  // Stable leader ID — avoids infinite loop in useCallback/useEffect
+  const leaderId = leaders.length === 1 ? leaders[0].card.id : null;
 
   const fetchSuggestions = useCallback(async () => {
     setSuggestLoading(true);
-    // Build aspects from leader name lookup via API
     const params = new URLSearchParams({ exclude_deck: deckId });
-    // If we have a leader, pass its set_code+name to get aspect-matched suggestions
-    // For now, fetch all collection cards not in deck (sorted by type)
-    if (leaders.length === 1) {
-      // Fetch leader card details to get aspects
+    if (leaderId) {
       try {
-        const leaderRes = await fetch(`/api/cards/${leaders[0].card.id}`);
+        const leaderRes = await fetch(`/api/cards/${leaderId}`);
         if (leaderRes.ok) {
           const leader = await leaderRes.json();
           const aspects: string[] = Array.isArray(leader.raw_data?.aspects)
@@ -129,13 +121,15 @@ export default function DeckBuilder({
     const res = await fetch(`/api/collection?${params}`);
     if (res.ok) {
       const data = await res.json();
-      setSuggestions(data.map((i: { card: SearchResult; quantity: number }) => ({
-        card: i.card,
-        quantity: i.quantity,
-      })));
+      setSuggestions(
+        data.map((i: { card: SearchResult; quantity: number }) => ({
+          card: i.card,
+          quantity: i.quantity,
+        }))
+      );
     }
     setSuggestLoading(false);
-  }, [deckId, leaders]);
+  }, [deckId, leaderId]); // leaderId is a stable string, not an array reference
 
   useEffect(() => {
     if (tab === "suggest") fetchSuggestions();
