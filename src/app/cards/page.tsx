@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import SearchBar from "./SearchBar";
+import FiltersBar from "./FiltersBar";
+import type { Prisma } from "@/generated/prisma/client";
 
 const LIMIT = 20;
 
@@ -14,19 +17,40 @@ const RARITY_COLOR: Record<string, string> = {
 };
 
 type Props = {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    page?: string;
+    set?: string;
+    type?: string;
+    rarity?: string;
+    aspect?: string;
+  }>;
 };
 
 export default async function CardsPage({ searchParams }: Props) {
-  const { search = "", page: pageParam = "1" } = await searchParams;
+  const {
+    search = "",
+    page: pageParam = "1",
+    set = "",
+    type = "",
+    rarity = "",
+    aspect = "",
+  } = await searchParams;
+
   const page = Math.max(1, Number(pageParam));
   const skip = (page - 1) * LIMIT;
 
-  const where = search
-    ? { name: { contains: search, mode: "insensitive" as const } }
-    : {};
+  const where: Prisma.CardWhereInput = {
+    ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
+    ...(set ? { set_code: set } : {}),
+    ...(type ? { type } : {}),
+    ...(rarity ? { rarity } : {}),
+    ...(aspect
+      ? { raw_data: { path: ["aspects"], array_contains: aspect } }
+      : {}),
+  };
 
-  const [cards, total] = await Promise.all([
+  const [cards, total, sets] = await Promise.all([
     prisma.card.findMany({
       where,
       select: {
@@ -42,6 +66,7 @@ export default async function CardsPage({ searchParams }: Props) {
       take: LIMIT,
     }),
     prisma.card.count({ where }),
+    prisma.set.findMany({ select: { code: true, name: true }, orderBy: { code: "asc" } }),
   ]);
 
   const pages = Math.ceil(total / LIMIT);
@@ -49,6 +74,10 @@ export default async function CardsPage({ searchParams }: Props) {
   function pageUrl(p: number) {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
+    if (set) params.set("set", set);
+    if (type) params.set("type", type);
+    if (rarity) params.set("rarity", rarity);
+    if (aspect) params.set("aspect", aspect);
     params.set("page", String(p));
     return `/cards?${params.toString()}`;
   }
@@ -57,13 +86,21 @@ export default async function CardsPage({ searchParams }: Props) {
     <div className="max-w-2xl mx-auto px-3 py-4">
       <h1 className="text-xl font-bold text-yellow-400 mb-4">Cartes</h1>
 
-      <div className="mb-4">
+      <div className="mb-2">
         <SearchBar defaultValue={search} />
-        <p className="mt-2 text-xs text-zinc-500">
-          {total} carte{total > 1 ? "s" : ""}
-          {search && ` pour "${search}"`}
-        </p>
       </div>
+
+      <Suspense>
+        <FiltersBar
+          sets={sets}
+          active={{ set, type, rarity, aspect }}
+        />
+      </Suspense>
+
+      <p className="text-xs text-zinc-500 mb-4">
+        {total} carte{total > 1 ? "s" : ""}
+        {search && ` pour "${search}"`}
+      </p>
 
       {cards.length === 0 ? (
         <p className="text-center text-zinc-500 py-16">Aucune carte trouvée.</p>
@@ -97,9 +134,7 @@ export default async function CardsPage({ searchParams }: Props) {
                 </p>
                 <div className="flex items-center gap-1 mt-1 flex-wrap">
                   <span className="text-xs text-zinc-500">{card.set_code}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${RARITY_COLOR[card.rarity] ?? "bg-zinc-700 text-zinc-300"}`}
-                  >
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${RARITY_COLOR[card.rarity] ?? "bg-zinc-700 text-zinc-300"}`}>
                     {card.rarity}
                   </span>
                 </div>
@@ -112,21 +147,13 @@ export default async function CardsPage({ searchParams }: Props) {
       {pages > 1 && (
         <div className="flex items-center justify-center gap-3 mt-6">
           {page > 1 && (
-            <Link
-              href={pageUrl(page - 1)}
-              className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition-colors"
-            >
+            <Link href={pageUrl(page - 1)} className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition-colors">
               ← Précédent
             </Link>
           )}
-          <span className="text-sm text-zinc-500">
-            {page} / {pages}
-          </span>
+          <span className="text-sm text-zinc-500">{page} / {pages}</span>
           {page < pages && (
-            <Link
-              href={pageUrl(page + 1)}
-              className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition-colors"
-            >
+            <Link href={pageUrl(page + 1)} className="px-4 py-2 rounded-lg bg-zinc-800 text-sm hover:bg-zinc-700 transition-colors">
               Suivant →
             </Link>
           )}
