@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -78,6 +78,11 @@ function CardRow({
   );
 }
 
+type SuggestionItem = {
+  card: SearchResult;
+  quantity: number;
+};
+
 export default function DeckBuilder({
   deckId, initialCards,
 }: {
@@ -89,8 +94,52 @@ export default function DeckBuilder({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [, startTransition] = useTransition();
   const [loadingCardId, setLoadingCardId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"search" | "suggest">("search");
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
 
   const { leaders, bases, mainTotal, errors, isValid } = useDeckValidation(cards);
+
+  // Derive leader aspects from raw_data
+  const leaderAspects: string[] = (() => {
+    if (leaders.length !== 1) return [];
+    // aspects are not in our DeckCard type — fetch via suggestion
+    return [];
+  })();
+
+  const fetchSuggestions = useCallback(async () => {
+    setSuggestLoading(true);
+    // Build aspects from leader name lookup via API
+    const params = new URLSearchParams({ exclude_deck: deckId });
+    // If we have a leader, pass its set_code+name to get aspect-matched suggestions
+    // For now, fetch all collection cards not in deck (sorted by type)
+    if (leaders.length === 1) {
+      // Fetch leader card details to get aspects
+      try {
+        const leaderRes = await fetch(`/api/cards/${leaders[0].card.id}`);
+        if (leaderRes.ok) {
+          const leader = await leaderRes.json();
+          const aspects: string[] = Array.isArray(leader.raw_data?.aspects)
+            ? leader.raw_data.aspects
+            : [];
+          if (aspects.length > 0) params.set("aspects", aspects.join(","));
+        }
+      } catch {}
+    }
+    const res = await fetch(`/api/collection?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      setSuggestions(data.map((i: { card: SearchResult; quantity: number }) => ({
+        card: i.card,
+        quantity: i.quantity,
+      })));
+    }
+    setSuggestLoading(false);
+  }, [deckId, leaders]);
+
+  useEffect(() => {
+    if (tab === "suggest") fetchSuggestions();
+  }, [tab, fetchSuggestions]);
 
   async function handleSearch(value: string) {
     setSearch(value);
@@ -183,43 +232,99 @@ export default function DeckBuilder({
         )}
       </div>
 
-      {/* Search */}
-      <div className="rounded-xl bg-space-900 border border-space-700 p-3 relative overflow-hidden">
+      {/* Search / Suggestions tabs */}
+      <div className="rounded-xl bg-space-900 border border-space-700 overflow-hidden relative">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-holo/15 to-transparent" />
-        <p className="text-[10px] text-sand-dim uppercase tracking-[0.2em] mb-2">Ajouter une carte</p>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-holo-dim text-sm">⌕</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Rechercher..."
-            className="w-full rounded-lg bg-space-800 border border-space-700 pl-8 pr-4 py-2 text-sm text-sand placeholder-sand-dim outline-none focus:border-holo focus:ring-1 focus:ring-holo/30 transition-all"
-          />
+
+        {/* Tab bar */}
+        <div className="flex border-b border-space-700">
+          {(["search", "suggest"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 py-2.5 text-xs font-semibold tracking-wider uppercase transition-colors duration-150 ${
+                tab === t
+                  ? "text-holo border-b-2 border-holo -mb-px"
+                  : "text-sand-dim hover:text-sand"
+              }`}
+            >
+              {t === "search" ? "Rechercher" : "Ma collection"}
+            </button>
+          ))}
         </div>
-        {results.length > 0 && (
-          <div className="mt-2 flex flex-col gap-1 max-h-64 overflow-y-auto">
-            {results.map((card) => (
-              <button
-                key={card.id}
-                onClick={() => addCard(card)}
-                disabled={loadingCardId === card.id}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-space-800 transition-colors text-left disabled:opacity-50"
-              >
-                {card.image_url && (
-                  <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-space-800">
-                    <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized sizes="32px" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-sand truncate">{card.name}</p>
-                  <p className="text-xs text-sand-dim">{card.type} · {card.set_code}</p>
+
+        <div className="p-3">
+          {tab === "search" && (
+            <>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-holo-dim text-sm">⌕</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Rechercher dans toutes les cartes..."
+                  className="w-full rounded-lg bg-space-800 border border-space-700 pl-8 pr-4 py-2 text-sm text-sand placeholder-sand-dim outline-none focus:border-holo focus:ring-1 focus:ring-holo/30 transition-all"
+                />
+              </div>
+              {results.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1 max-h-56 overflow-y-auto">
+                  {results.map((card) => (
+                    <button key={card.id} onClick={() => addCard(card)} disabled={loadingCardId === card.id}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-space-800 transition-colors text-left disabled:opacity-50">
+                      {card.image_url && (
+                        <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-space-800">
+                          <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized sizes="32px" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-sand truncate">{card.name}</p>
+                        <p className="text-xs text-sand-dim">{card.type} · {card.set_code}</p>
+                      </div>
+                      <span className="text-holo text-lg shrink-0">+</span>
+                    </button>
+                  ))}
                 </div>
-                <span className="text-holo text-lg shrink-0">+</span>
-              </button>
-            ))}
-          </div>
-        )}
+              )}
+            </>
+          )}
+
+          {tab === "suggest" && (
+            <>
+              {leaders.length !== 1 ? (
+                <p className="text-xs text-sand-dim py-4 text-center">
+                  Ajoute un Leader pour voir les suggestions de ta collection.
+                </p>
+              ) : suggestLoading ? (
+                <p className="text-xs text-sand-dim py-4 text-center animate-pulse">Chargement...</p>
+              ) : suggestions.length === 0 ? (
+                <p className="text-xs text-sand-dim py-4 text-center">
+                  Aucune carte compatible dans ta collection.
+                </p>
+              ) : (
+                <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
+                  {suggestions.map(({ card, quantity }) => (
+                    <button key={card.id} onClick={() => addCard(card)} disabled={loadingCardId === card.id}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-space-800 transition-colors text-left disabled:opacity-50">
+                      {card.image_url && (
+                        <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-space-800">
+                          <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized sizes="32px" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-sand truncate">{card.name}</p>
+                        <p className="text-xs text-sand-dim">{card.type} · {card.set_code}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] text-sand-dim">×{quantity}</span>
+                        <span className="text-holo text-lg">+</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Card list */}

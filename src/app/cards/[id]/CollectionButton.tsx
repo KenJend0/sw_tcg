@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Props = { cardId: string; inCollection: boolean; quantity: number };
+type Props = { cardId: string; inCollection: boolean; quantity: number; pinned?: boolean };
 
-export default function CollectionButton({ cardId, inCollection, quantity }: Props) {
+export default function CollectionButton({ cardId, inCollection, quantity, pinned = false }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [qty, setQty] = useState(quantity);
   const [owned, setOwned] = useState(inCollection);
+  const [isPinned, setIsPinned] = useState(pinned);
 
   async function add() {
     setLoading(true);
@@ -36,8 +37,21 @@ export default function CollectionButton({ cardId, inCollection, quantity }: Pro
     } else {
       await fetch(`/api/collection/${cardId}`, { method: "DELETE" });
       setOwned(false);
+      setIsPinned(false);
       setQty(0);
     }
+    setLoading(false);
+    router.refresh();
+  }
+
+  async function togglePin() {
+    setLoading(true);
+    await fetch(`/api/collection/${cardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned: !isPinned }),
+    });
+    setIsPinned((p) => !p);
     setLoading(false);
     router.refresh();
   }
@@ -61,6 +75,18 @@ export default function CollectionButton({ cardId, inCollection, quantity }: Pro
         <p className="text-sm font-bold text-holo">{qty} exemplaire{qty > 1 ? "s" : ""}</p>
       </div>
       <div className="flex items-center gap-2">
+        <button
+          onClick={togglePin}
+          disabled={loading}
+          title={isPinned ? "Retirer des favoris" : "Épingler comme favori"}
+          className={`w-9 h-9 rounded-lg border text-lg transition-all duration-150 disabled:opacity-50 ${
+            isPinned
+              ? "bg-burn/20 border-burn/50 text-burn"
+              : "bg-space-800 border-space-700 text-sand-dim hover:border-burn/40 hover:text-burn"
+          }`}
+        >
+          {isPinned ? "★" : "☆"}
+        </button>
         <button
           onClick={remove}
           disabled={loading}

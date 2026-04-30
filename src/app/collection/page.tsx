@@ -35,7 +35,7 @@ export default async function CollectionPage() {
         },
       },
       orderBy: { card: { name: "asc" } },
-    }),
+    }),  // includes pinned field automatically
     prisma.set.findMany({
       include: { _count: { select: { cards: true } } },
       orderBy: { code: "asc" },
@@ -67,6 +67,8 @@ export default async function CollectionPage() {
     acc[card.rarity] = (acc[card.rarity] ?? 0) + 1;
     return acc;
   }, {});
+
+  const pinnedItems = items.filter((i) => i.pinned);
 
   return (
     <div className="max-w-2xl mx-auto px-3 py-4 fade-in">
@@ -102,6 +104,39 @@ export default async function CollectionPage() {
         </div>
       ) : (
         <>
+          {/* Favoris */}
+          {pinnedItems.length > 0 && (
+            <div className="mb-6">
+              <p className="text-[10px] font-semibold text-sand-dim uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                <span className="text-burn">★</span> Favoris
+              </p>
+              <div className="flex gap-3">
+                {pinnedItems.map(({ card, quantity }) => (
+                  <Link
+                    key={card.id}
+                    href={`/cards/${card.id}`}
+                    className="group flex-1 max-w-[140px] holo-card rounded-xl overflow-hidden bg-space-900 border border-burn/30 hover:border-burn transition-all duration-200 relative"
+                  >
+                    <div className="relative aspect-[63/88] bg-space-800">
+                      {card.image_url ? (
+                        <Image src={card.image_url} alt={card.name} fill className="object-cover group-hover:scale-[1.03] transition-transform duration-200" sizes="140px" unoptimized />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-space-700 text-xs">—</div>
+                      )}
+                      <span className="absolute top-1.5 right-1.5 text-burn text-sm z-10">★</span>
+                      <span className="absolute bottom-1.5 right-1.5 bg-holo text-space-950 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none z-10">
+                        ×{quantity}
+                      </span>
+                    </div>
+                    <div className="p-2 border-t border-burn/20">
+                      <p className="text-xs font-semibold text-sand truncate group-hover:text-burn transition-colors">{card.name}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rarity breakdown */}
           <div className="mb-6">
             <p className="text-[10px] font-semibold text-sand-dim uppercase tracking-[0.2em] mb-3">
@@ -123,14 +158,14 @@ export default async function CollectionPage() {
             </p>
             <div className="flex flex-col gap-2">
               {setStats.map((s) => (
-                <div key={s.code} className="rounded-xl bg-space-900 border border-space-700 px-3 py-2.5 relative overflow-hidden">
+                <Link key={s.code} href={`/collection/sets/${s.code}`} className="group rounded-xl bg-space-900 border border-space-700 hover:border-holo px-3 py-2.5 relative overflow-hidden transition-all duration-150">
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-holo/10 to-transparent" />
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-xs font-bold text-holo shrink-0 font-[family-name:var(--font-rajdhani)]">
                         {s.code}
                       </span>
-                      <span className="text-xs text-sand-dim truncate">{s.name}</span>
+                      <span className="text-xs text-sand-dim truncate group-hover:text-sand transition-colors">{s.name}</span>
                     </div>
                     <span className="text-xs text-sand shrink-0 ml-2 tabular-nums">
                       {s.owned}/{s.total}
@@ -142,8 +177,8 @@ export default async function CollectionPage() {
                       style={{ width: `${s.pct}%` }}
                     />
                   </div>
-                  <p className="text-right text-[10px] text-sand-dim mt-0.5">{s.pct}%</p>
-                </div>
+                  <p className="text-right text-[10px] text-sand-dim mt-0.5">{s.pct}% · <span className="text-holo/60">Voir →</span></p>
+                </Link>
               ))}
             </div>
           </div>

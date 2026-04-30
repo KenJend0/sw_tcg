@@ -11,15 +11,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const { cardId } = await params;
-  const { quantity } = await req.json();
+  const body = await req.json();
 
-  if (typeof quantity !== "number" || quantity < 1) {
-    return NextResponse.json({ error: "Quantité invalide" }, { status: 400 });
+  const data: { quantity?: number; pinned?: boolean } = {};
+
+  if (body.quantity !== undefined) {
+    if (typeof body.quantity !== "number" || body.quantity < 1)
+      return NextResponse.json({ error: "Quantité invalide" }, { status: 400 });
+    data.quantity = body.quantity;
+  }
+  if (body.pinned !== undefined) {
+    data.pinned = Boolean(body.pinned);
   }
 
   const item = await prisma.collection.update({
     where: { user_id_card_id: { user_id: session.user.id, card_id: cardId } },
-    data: { quantity },
+    data,
   });
 
   return NextResponse.json(item);
