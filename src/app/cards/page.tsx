@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import SearchBar from "./SearchBar";
 import FiltersBar from "./FiltersBar";
-import type { Prisma } from "@/generated/prisma/client";
+import type { Prisma } from "@prisma/client";
 
 const LIMIT = 20;
 
