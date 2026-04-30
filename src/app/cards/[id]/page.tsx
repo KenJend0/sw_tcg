@@ -64,7 +64,7 @@ export default async function CardDetailPage({ params }: Props) {
           <h1 className="text-lg font-bold text-yellow-400 leading-tight">
             {card.name}
           </h1>
-          {raw.subtitle && (
+          {!!raw.subtitle && (
             <p className="text-sm text-zinc-400 -mt-1">{String(raw.subtitle)}</p>
           )}
           <div className="flex flex-wrap gap-1.5">
@@ -93,12 +93,12 @@ export default async function CardDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {(raw.front_text || raw.back_text) && (
+      {(!!raw.front_text || !!raw.back_text) && (
         <div className="mt-4 rounded-xl bg-zinc-900 border border-zinc-800 p-4">
-          {raw.front_text && (
+          {!!raw.front_text && (
             <p className="text-sm text-zinc-300 whitespace-pre-line">{String(raw.front_text)}</p>
           )}
-          {raw.back_text && (
+          {!!raw.back_text && (
             <p className="text-sm text-zinc-400 whitespace-pre-line mt-2">{String(raw.back_text)}</p>
           )}
         </div>
@@ -124,7 +124,7 @@ export default async function CardDetailPage({ params }: Props) {
         </div>
       )}
 
-      {raw.artist && (
+      {!!raw.artist && (
         <p className="mt-4 text-xs text-zinc-600">Illustration : {String(raw.artist)}</p>
       )}
 
