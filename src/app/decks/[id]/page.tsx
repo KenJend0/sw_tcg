@@ -17,14 +17,7 @@ export default async function DeckPage({ params }: Props) {
       deck_cards: {
         include: {
           card: {
-            select: {
-              id: true,
-              name: true,
-              set_code: true,
-              type: true,
-              rarity: true,
-              image_url: true,
-            },
+            select: { id: true, name: true, set_code: true, type: true, rarity: true, image_url: true },
           },
         },
         orderBy: { card: { name: "asc" } },
@@ -40,15 +33,20 @@ export default async function DeckPage({ params }: Props) {
   }));
 
   return (
-    <div className="max-w-2xl mx-auto px-3 py-4">
+    <div className="max-w-2xl mx-auto px-3 py-4 fade-in">
       <Link
         href="/decks"
-        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-yellow-400 mb-4 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-sand-dim hover:text-holo mb-5 transition-colors tracking-wider uppercase"
       >
         ← Mes decks
       </Link>
 
-      <h1 className="text-xl font-bold text-yellow-400 mb-4">{deck.name}</h1>
+      <div className="mb-5">
+        <p className="text-xs tracking-[0.3em] text-holo-dim uppercase mb-0.5">Deck Builder</p>
+        <h1 className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold text-sand tracking-wide">
+          {deck.name}
+        </h1>
+      </div>
 
       <DeckBuilder deckId={deck.id} initialCards={initialCards} />
     </div>

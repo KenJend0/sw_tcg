@@ -13,13 +13,11 @@ export default function CreateDeckForm() {
     e.preventDefault();
     if (!name.trim()) return;
     setLoading(true);
-
     const res = await fetch("/api/decks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-
     if (res.ok) {
       const deck = await res.json();
       router.push(`/decks/${deck.id}`);
@@ -32,15 +30,17 @@ export default function CreateDeckForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full rounded-xl border-2 border-dashed border-zinc-700 py-4 text-sm text-zinc-500 hover:border-yellow-400 hover:text-yellow-400 transition-colors"
+        className="w-full rounded-xl border border-dashed border-space-700 py-4 text-sm text-sand-dim hover:border-holo hover:text-holo transition-all duration-150 flex items-center justify-center gap-2"
       >
-        + Nouveau deck
+        <span className="text-lg leading-none">+</span>
+        Nouveau deck
       </button>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl bg-zinc-900 border border-zinc-700 p-4 flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="rounded-xl bg-space-900 border border-holo/30 p-4 flex flex-col gap-3 relative overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-holo/40 to-transparent" />
       <input
         type="text"
         placeholder="Nom du deck"
@@ -48,20 +48,20 @@ export default function CreateDeckForm() {
         onChange={(e) => setName(e.target.value)}
         autoFocus
         required
-        className="rounded-lg bg-zinc-800 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
+        className="rounded-lg bg-space-800 border border-space-700 px-3 py-2.5 text-sm text-sand placeholder-sand-dim outline-none focus:border-holo focus:ring-1 focus:ring-holo/30 transition-all"
       />
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="flex-1 rounded-lg bg-yellow-400 text-zinc-950 font-semibold py-2 text-sm hover:bg-yellow-300 disabled:opacity-50 transition-colors"
+          className="flex-1 rounded-lg bg-holo text-space-950 font-bold py-2.5 text-sm hover:bg-holo-dim disabled:opacity-50 transition-all active:scale-[0.98] glow-holo"
         >
           {loading ? "Création..." : "Créer"}
         </button>
         <button
           type="button"
           onClick={() => { setOpen(false); setName(""); }}
-          className="px-4 rounded-lg bg-zinc-800 text-zinc-400 text-sm hover:bg-zinc-700 transition-colors"
+          className="px-4 rounded-lg bg-space-800 border border-space-700 text-sand-dim text-sm hover:border-holo hover:text-sand transition-all"
         >
           Annuler
         </button>

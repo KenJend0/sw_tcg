@@ -6,61 +6,82 @@ import { useRouter } from "next/navigation";
 
 type DeckCard = {
   card: {
-    id: string;
-    name: string;
-    set_code: string;
-    type: string;
-    rarity: string;
-    image_url: string | null;
+    id: string; name: string; set_code: string;
+    type: string; rarity: string; image_url: string | null;
   };
   quantity: number;
 };
 
 type SearchResult = {
-  id: string;
-  name: string;
-  set_code: string;
-  type: string;
-  rarity: string;
-  image_url: string | null;
+  id: string; name: string; set_code: string;
+  type: string; rarity: string; image_url: string | null;
 };
 
 function useDeckValidation(cards: DeckCard[]) {
-  const leaders = cards.filter((c) => c.card.type === "Leader");
-  const bases = cards.filter((c) => c.card.type === "Base");
-  const main = cards.filter(
-    (c) => c.card.type !== "Leader" && c.card.type !== "Base"
-  );
+  const leaders   = cards.filter((c) => c.card.type === "Leader");
+  const bases     = cards.filter((c) => c.card.type === "Base");
+  const main      = cards.filter((c) => c.card.type !== "Leader" && c.card.type !== "Base");
   const mainTotal = main.reduce((s, c) => s + c.quantity, 0);
   const overLimit = main.filter((c) => c.quantity > 3);
 
   const errors: string[] = [];
   if (leaders.length === 0) errors.push("Leader manquant");
-  if (leaders.length > 1) errors.push("1 seul Leader autorisé");
-  if (bases.length === 0) errors.push("Base manquante");
-  if (bases.length > 1) errors.push("1 seule Base autorisée");
-  if (mainTotal < 50) errors.push(`${50 - mainTotal} cartes manquantes`);
-  if (mainTotal > 50) errors.push(`${mainTotal - 50} cartes en trop`);
-  overLimit.forEach((c) =>
-    errors.push(`"${c.card.name}" : max 3 exemplaires`)
-  );
+  if (leaders.length > 1)   errors.push("1 seul Leader autorisé");
+  if (bases.length === 0)   errors.push("Base manquante");
+  if (bases.length > 1)     errors.push("1 seule Base autorisée");
+  if (mainTotal < 50)       errors.push(`${50 - mainTotal} carte${50 - mainTotal > 1 ? "s" : ""} manquante${50 - mainTotal > 1 ? "s" : ""}`);
+  if (mainTotal > 50)       errors.push(`${mainTotal - 50} carte${mainTotal - 50 > 1 ? "s" : ""} en trop`);
+  overLimit.forEach((c) => errors.push(`"${c.card.name}" : max 3×`));
 
-  return {
-    leaders,
-    bases,
-    mainTotal,
-    overLimit,
-    errors,
-    isValid: errors.length === 0,
-  };
+  return { leaders, bases, mainTotal, errors, isValid: errors.length === 0 };
+}
+
+function CardRow({
+  card, quantity, overMax, loading, onMinus, onPlus,
+}: {
+  card: DeckCard["card"]; quantity: number; overMax: boolean;
+  loading: boolean; onMinus: () => void; onPlus: () => void;
+}) {
+  return (
+    <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${
+      overMax ? "bg-alert/10 border-alert/40" : "bg-space-900 border-space-700"
+    }`}>
+      {card.image_url && (
+        <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-space-800">
+          <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized sizes="32px" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-sand truncate">{card.name}</p>
+        <p className="text-xs text-sand-dim">{card.type} · {card.set_code}</p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          onClick={onMinus}
+          disabled={loading}
+          className="w-7 h-7 rounded-lg bg-space-800 border border-space-700 hover:border-holo text-sand-dim font-bold text-sm disabled:opacity-50 transition-all"
+        >
+          −
+        </button>
+        <span className={`w-6 text-center text-sm font-bold tabular-nums ${overMax ? "text-alert" : "text-holo"}`}>
+          {quantity}
+        </span>
+        <button
+          onClick={onPlus}
+          disabled={loading}
+          className="w-7 h-7 rounded-lg bg-space-800 border border-space-700 hover:border-holo text-sand-dim font-bold text-sm disabled:opacity-50 transition-all"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function DeckBuilder({
-  deckId,
-  initialCards,
+  deckId, initialCards,
 }: {
-  deckId: string;
-  initialCards: DeckCard[];
+  deckId: string; initialCards: DeckCard[];
 }) {
   const router = useRouter();
   const [cards, setCards] = useState(initialCards);
@@ -69,20 +90,13 @@ export default function DeckBuilder({
   const [, startTransition] = useTransition();
   const [loadingCardId, setLoadingCardId] = useState<string | null>(null);
 
-  const { leaders, bases, mainTotal, errors, isValid } =
-    useDeckValidation(cards);
-  const total = cards.reduce((s, c) => s + c.quantity, 0);
+  const { leaders, bases, mainTotal, errors, isValid } = useDeckValidation(cards);
 
   async function handleSearch(value: string) {
     setSearch(value);
-    if (!value.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!value.trim()) { setResults([]); return; }
     startTransition(async () => {
-      const res = await fetch(
-        `/api/cards?search=${encodeURIComponent(value)}&limit=10`
-      );
+      const res = await fetch(`/api/cards?search=${encodeURIComponent(value)}&limit=10`);
       const data = await res.json();
       setResults(data.data ?? []);
     });
@@ -97,13 +111,8 @@ export default function DeckBuilder({
     });
     setCards((prev) => {
       const existing = prev.find((c) => c.card.id === card.id);
-      if (existing)
-        return prev.map((c) =>
-          c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
-      return [...prev, { card, quantity: 1 }].sort((a, b) =>
-        a.card.name.localeCompare(b.card.name)
-      );
+      if (existing) return prev.map((c) => c.card.id === card.id ? { ...c, quantity: c.quantity + 1 } : c);
+      return [...prev, { card, quantity: 1 }].sort((a, b) => a.card.name.localeCompare(b.card.name));
     });
     setLoadingCardId(null);
     router.refresh();
@@ -123,84 +132,71 @@ export default function DeckBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quantity: newQty }),
       });
-      setCards((prev) =>
-        prev.map((c) =>
-          c.card.id === cardId ? { ...c, quantity: newQty } : c
-        )
-      );
+      setCards((prev) => prev.map((c) => c.card.id === cardId ? { ...c, quantity: newQty } : c));
     }
     setLoadingCardId(null);
     router.refresh();
   }
 
-  // Group cards by type for display
-  const cardGroups = [
-    { label: "Leader", items: cards.filter((c) => c.card.type === "Leader") },
-    { label: "Base", items: cards.filter((c) => c.card.type === "Base") },
-    {
-      label: "Deck principal",
-      items: cards
-        .filter((c) => c.card.type !== "Leader" && c.card.type !== "Base")
-        .sort((a, b) => a.card.name.localeCompare(b.card.name)),
-    },
+  const groups = [
+    { label: "Leader",         count: leaders.reduce((s,c)=>s+c.quantity,0),     need: "1/1",  items: cards.filter((c) => c.card.type === "Leader") },
+    { label: "Base",           count: bases.reduce((s,c)=>s+c.quantity,0),       need: "1/1",  items: cards.filter((c) => c.card.type === "Base") },
+    { label: "Deck principal", count: mainTotal, need: `${mainTotal}/50`, items: cards.filter((c) => c.card.type !== "Leader" && c.card.type !== "Base").sort((a,b) => a.card.name.localeCompare(b.card.name)) },
   ].filter((g) => g.items.length > 0);
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Validation status */}
-      <div
-        className={`rounded-xl border p-3 ${
-          isValid
-            ? "bg-emerald-950 border-emerald-700"
-            : "bg-zinc-900 border-zinc-700"
-        }`}
-      >
+      {/* Validation panel */}
+      <div className={`rounded-xl border p-3 relative overflow-hidden transition-colors duration-300 ${
+        isValid ? "bg-emerald-950/30 border-emerald-700/40" : "bg-space-900 border-space-700"
+      }`}>
+        <div className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent ${isValid ? "via-emerald-400/40" : "via-holo/20"} to-transparent`} />
         <div className="flex items-center justify-between mb-2">
-          <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              isValid
-                ? "bg-emerald-500 text-white"
-                : "bg-zinc-700 text-zinc-300"
-            }`}
-          >
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border font-[family-name:var(--font-rajdhani)] tracking-wide ${
+            isValid
+              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+              : "bg-space-800 border-space-700 text-sand-dim"
+          }`}>
             {isValid ? "✓ Deck valide" : "Deck incomplet"}
           </span>
-          <span className="text-sm font-bold text-zinc-300">
-            {total} carte{total > 1 ? "s" : ""}
+          <span className="text-sm font-bold text-sand tabular-nums">
+            {cards.reduce((s,c)=>s+c.quantity,0)} cartes
           </span>
         </div>
-
-        {/* Checklist */}
         <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <Rule ok={leaders.length === 1} label={`Leader (${leaders.length}/1)`} />
-          <Rule ok={bases.length === 1} label={`Base (${bases.length}/1)`} />
-          <Rule ok={mainTotal === 50} label={`Deck (${mainTotal}/50)`} />
-          <Rule ok={true} label="Max 3×" dimmed={errors.some((e) => e.includes("max 3"))} />
+          {[
+            { ok: leaders.length === 1, label: `Leader ${leaders.length}/1` },
+            { ok: bases.length === 1,   label: `Base ${bases.length}/1` },
+            { ok: mainTotal === 50,     label: `Deck ${mainTotal}/50` },
+          ].map(({ ok, label }) => (
+            <span key={label} className={`text-xs flex items-center gap-1 ${ok ? "text-emerald-400" : "text-sand-dim"}`}>
+              {ok ? "✓" : "○"} {label}
+            </span>
+          ))}
         </div>
-
         {errors.length > 0 && (
           <ul className="mt-2 flex flex-col gap-0.5">
             {errors.map((e) => (
-              <li key={e} className="text-xs text-red-400">
-                • {e}
-              </li>
+              <li key={e} className="text-xs text-alert/80">· {e}</li>
             ))}
           </ul>
         )}
       </div>
 
       {/* Search */}
-      <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
-        <p className="text-xs text-zinc-500 mb-2 font-medium uppercase tracking-wide">
-          Ajouter une carte
-        </p>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="Rechercher..."
-          className="w-full rounded-lg bg-zinc-800 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
-        />
+      <div className="rounded-xl bg-space-900 border border-space-700 p-3 relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-holo/15 to-transparent" />
+        <p className="text-[10px] text-sand-dim uppercase tracking-[0.2em] mb-2">Ajouter une carte</p>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-holo-dim text-sm">⌕</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Rechercher..."
+            className="w-full rounded-lg bg-space-800 border border-space-700 pl-8 pr-4 py-2 text-sm text-sand placeholder-sand-dim outline-none focus:border-holo focus:ring-1 focus:ring-holo/30 transition-all"
+          />
+        </div>
         {results.length > 0 && (
           <div className="mt-2 flex flex-col gap-1 max-h-64 overflow-y-auto">
             {results.map((card) => (
@@ -208,142 +204,58 @@ export default function DeckBuilder({
                 key={card.id}
                 onClick={() => addCard(card)}
                 disabled={loadingCardId === card.id}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-800 transition-colors text-left disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-space-800 transition-colors text-left disabled:opacity-50"
               >
                 {card.image_url && (
-                  <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-zinc-700">
-                    <Image
-                      src={card.image_url}
-                      alt={card.name}
-                      fill
-                      className="object-cover"
-                      unoptimized
-                      sizes="32px"
-                    />
+                  <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-space-800">
+                    <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized sizes="32px" />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-zinc-100 truncate">{card.name}</p>
-                  <p className="text-xs text-zinc-500">
-                    {card.type} · {card.set_code}
-                  </p>
+                  <p className="text-sm text-sand truncate">{card.name}</p>
+                  <p className="text-xs text-sand-dim">{card.type} · {card.set_code}</p>
                 </div>
-                <span className="ml-auto text-yellow-400 text-lg shrink-0">+</span>
+                <span className="text-holo text-lg shrink-0">+</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Card list grouped by type */}
-      {cardGroups.length === 0 ? (
-        <p className="text-center text-zinc-600 text-sm py-8">
-          Aucune carte. Recherche ci-dessus.
-        </p>
+      {/* Card list */}
+      {groups.length === 0 ? (
+        <p className="text-center text-sand-dim text-sm py-8">Aucune carte. Recherche ci-dessus.</p>
       ) : (
         <div className="flex flex-col gap-4">
-          {cardGroups.map((group) => (
+          {groups.map((group) => (
             <div key={group.label}>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-semibold text-sand-dim uppercase tracking-[0.2em]">
                   {group.label}
                 </p>
-                {group.label === "Deck principal" && (
-                  <span
-                    className={`text-xs font-bold ${
-                      mainTotal === 50 ? "text-emerald-400" : "text-zinc-500"
-                    }`}
-                  >
-                    {mainTotal}/50
-                  </span>
-                )}
+                <span className={`text-xs font-bold tabular-nums font-[family-name:var(--font-rajdhani)] ${
+                  group.label === "Deck principal" && mainTotal === 50 ? "text-emerald-400" : "text-sand-dim"
+                }`}>
+                  {group.count}{group.label === "Deck principal" ? "/50" : "/1"}
+                </span>
               </div>
               <div className="flex flex-col gap-2">
-                {group.items.map(({ card, quantity }) => {
-                  const overMax =
-                    card.type !== "Leader" &&
-                    card.type !== "Base" &&
-                    quantity > 3;
-                  return (
-                    <div
-                      key={card.id}
-                      className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
-                        overMax
-                          ? "bg-red-950 border-red-800"
-                          : "bg-zinc-900 border-zinc-800"
-                      }`}
-                    >
-                      {card.image_url && (
-                        <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-zinc-700">
-                          <Image
-                            src={card.image_url}
-                            alt={card.name}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                            sizes="32px"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-zinc-100 truncate">
-                          {card.name}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {card.type} · {card.set_code}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => changeQty(card.id, -1)}
-                          disabled={loadingCardId === card.id}
-                          className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-sm disabled:opacity-50 transition-colors"
-                        >
-                          −
-                        </button>
-                        <span
-                          className={`w-6 text-center text-sm font-bold ${
-                            overMax ? "text-red-400" : "text-yellow-400"
-                          }`}
-                        >
-                          {quantity}
-                        </span>
-                        <button
-                          onClick={() => changeQty(card.id, +1)}
-                          disabled={loadingCardId === card.id}
-                          className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-sm disabled:opacity-50 transition-colors"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {group.items.map(({ card, quantity }) => (
+                  <CardRow
+                    key={card.id}
+                    card={card}
+                    quantity={quantity}
+                    overMax={card.type !== "Leader" && card.type !== "Base" && quantity > 3}
+                    loading={loadingCardId === card.id}
+                    onMinus={() => changeQty(card.id, -1)}
+                    onPlus={() => changeQty(card.id, +1)}
+                  />
+                ))}
               </div>
             </div>
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function Rule({
-  ok,
-  label,
-  dimmed = false,
-}: {
-  ok: boolean;
-  label: string;
-  dimmed?: boolean;
-}) {
-  return (
-    <span
-      className={`text-xs flex items-center gap-1 ${
-        dimmed ? "text-red-400" : ok ? "text-emerald-400" : "text-zinc-500"
-      }`}
-    >
-      {dimmed ? "✗" : ok ? "✓" : "○"} {label}
-    </span>
   );
 }
