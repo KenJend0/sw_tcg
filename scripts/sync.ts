@@ -5,9 +5,8 @@ const prisma = new PrismaClient();
 const API_BASE = "https://api.swuapi.com";
 const BATCH_SIZE = 200;
 
-async function fetchCardsSince(since: string, after?: string) {
-  const params = new URLSearchParams({ limit: String(BATCH_SIZE), since });
-  if (after) params.set("after", after);
+async function fetchCardsSince(since: string, offset: number) {
+  const params = new URLSearchParams({ limit: String(BATCH_SIZE), since, offset: String(offset) });
   const res = await fetch(`${API_BASE}/cards?${params}`);
   if (!res.ok) throw new Error(`Cards fetch failed: ${res.status}`);
   return res.json();
@@ -60,23 +59,25 @@ async function main() {
     data: { status: "running" },
   });
 
-  let cursor: string | undefined;
+  let offset = 0;
+  let apiTotal = 0;
   let total = 0;
 
   try {
     do {
-      const data = await fetchCardsSince(since, cursor);
+      const data = await fetchCardsSince(since, offset);
       const cards: any[] = data.cards ?? [];
       const pagination = data.pagination ?? {};
+      apiTotal = pagination.total ?? 0;
 
       if (cards.length === 0) break;
 
       const ok = await upsertCards(cards);
       total += ok;
-      cursor = pagination.next_cursor ?? undefined;
+      offset += cards.length;
 
-      console.log(`  +${ok} cards updated (total: ${total})`);
-    } while (cursor);
+      console.log(`  +${ok} cards updated (total: ${total}/${apiTotal})`);
+    } while (offset < apiTotal);
 
     await prisma.syncState.update({
       where: { resource: "cards" },

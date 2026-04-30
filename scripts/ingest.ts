@@ -12,9 +12,8 @@ async function fetchSets() {
   return Array.isArray(data) ? data : (data.sets ?? []);
 }
 
-async function fetchCardsPage(after?: string) {
-  const params = new URLSearchParams({ limit: String(BATCH_SIZE) });
-  if (after) params.set("after", after);
+async function fetchCardsPage(offset: number) {
+  const params = new URLSearchParams({ limit: String(BATCH_SIZE), offset: String(offset) });
   const res = await fetch(`${API_BASE}/cards?${params}`);
   if (!res.ok) throw new Error(`Cards fetch failed: ${res.status}`);
   return res.json();
@@ -83,30 +82,31 @@ async function main() {
   const sets = await fetchSets();
   await upsertSets(sets);
 
-  // 2. Cards (cursor-based pagination)
+  // 2. Cards (offset-based pagination — gets all 8071 cards)
   console.log("\n→ Fetching cards...");
-  let cursor: string | undefined;
+  let offset = 0;
   let totalCards = 0;
+  let apiTotal = 0;
   let page = 0;
 
   do {
     page++;
-    const data = await fetchCardsPage(cursor);
+    const data = await fetchCardsPage(offset);
     const cards: any[] = data.cards ?? [];
     const pagination = data.pagination ?? {};
+    apiTotal = pagination.total ?? 0;
 
     if (cards.length === 0) break;
 
     const { ok, skipped } = await upsertCards(cards);
     totalCards += ok;
-    cursor = pagination.next_cursor ?? undefined;
+    offset += cards.length;
 
-    const total = pagination.total ?? "?";
-    const pct = pagination.total ? Math.round((totalCards / pagination.total) * 100) : "?";
+    const pct = apiTotal ? Math.round((offset / apiTotal) * 100) : "?";
     console.log(
-      `  Page ${page}: +${ok} cards${skipped ? ` (${skipped} skipped)` : ""} — total ${totalCards}/${total} (${pct}%)`
+      `  Page ${page}: +${ok} cards${skipped ? ` (${skipped} skipped)` : ""} — total ${totalCards}/${apiTotal} (${pct}%)`
     );
-  } while (cursor);
+  } while (offset < apiTotal);
 
   // 3. Save sync state
   await prisma.syncState.upsert({
