@@ -12,6 +12,12 @@ type Props = {
 
 export default function LeaderFlip({ frontUrl, backUrl, name, epicAction }: Props) {
   const [flipped, setFlipped] = useState(false);
+  const primaryCard = flipped
+    ? { url: backUrl, alt: `${name} déploye`, highlighted: true, landscape: false }
+    : { url: frontUrl, alt: name, highlighted: true, landscape: true };
+  const secondaryCard = flipped
+    ? { url: frontUrl, alt: name, highlighted: false, landscape: true }
+    : { url: backUrl, alt: `${name} déploye`, highlighted: false, landscape: false };
 
   return (
     <div className="mb-6">
@@ -30,15 +36,32 @@ export default function LeaderFlip({ frontUrl, backUrl, name, epicAction }: Prop
 
       {/* Images */}
       <div className="flex gap-3">
-        {/* Front — landscape */}
-        <div className={`holo-card relative rounded-xl overflow-hidden bg-space-800 border transition-all duration-200 flex-1 aspect-[400/286] ${!flipped ? "border-holo/50" : "border-space-700 opacity-50"}`}>
-          <Image src={frontUrl} alt={name} fill className="object-cover" unoptimized sizes="50vw" />
-          {!flipped && <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-holo/40 to-transparent" />}
+        <div
+          className={`holo-card relative rounded-xl overflow-hidden bg-space-800 border transition-all duration-200 flex-1 ${primaryCard.landscape ? "aspect-[400/286]" : "aspect-[287/400]"} ${primaryCard.highlighted ? "border-holo/50" : "border-space-700 opacity-50"}`}
+        >
+          <Image
+            src={primaryCard.url}
+            alt={primaryCard.alt}
+            fill
+            className="object-cover"
+            unoptimized
+            sizes="50vw"
+          />
+          {primaryCard.highlighted && <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-holo/40 to-transparent" />}
         </div>
-        {/* Back — portrait */}
-        <div className={`holo-card relative rounded-xl overflow-hidden bg-space-800 border transition-all duration-200 w-28 aspect-[287/400] ${flipped ? "border-holo/50" : "border-space-700 opacity-50"}`}>
-          <Image src={backUrl} alt={`${name} déployé`} fill className="object-cover" unoptimized sizes="112px" />
-          {flipped && <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-holo/40 to-transparent" />}
+
+        <div
+          className={`holo-card relative rounded-xl overflow-hidden bg-space-800 border transition-all duration-200 w-28 ${secondaryCard.landscape ? "aspect-[400/286] self-start" : "aspect-[287/400]"} ${secondaryCard.highlighted ? "border-holo/50" : "border-space-700 opacity-50"}`}
+        >
+          <Image
+            src={secondaryCard.url}
+            alt={secondaryCard.alt}
+            fill
+            className="object-cover"
+            unoptimized
+            sizes="112px"
+          />
+          {secondaryCard.highlighted && <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-holo/40 to-transparent" />}
         </div>
       </div>
 
