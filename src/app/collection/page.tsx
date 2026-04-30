@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { cardAspect } from "@/lib/cardUtils";
 
 const RARITY_STYLE: Record<string, string> = {
   Common:    "border-sand-dim/30 text-sand-dim",
@@ -117,7 +118,7 @@ export default async function CollectionPage() {
                     href={`/cards/${card.id}`}
                     className="group flex-1 max-w-[140px] holo-card rounded-xl overflow-hidden bg-space-900 border border-burn/30 hover:border-burn transition-all duration-200 relative"
                   >
-                    <div className="relative aspect-[63/88] bg-space-800">
+                    <div className={`relative ${cardAspect(card.type)} bg-space-800`}>
                       {card.image_url ? (
                         <Image src={card.image_url} alt={card.name} fill className="object-cover group-hover:scale-[1.03] transition-transform duration-200" sizes="140px" unoptimized />
                       ) : (
@@ -194,7 +195,7 @@ export default async function CollectionPage() {
                 href={`/cards/${card.id}`}
                 className="group holo-card rounded-xl overflow-hidden bg-space-900 border border-space-700 hover:border-holo transition-all duration-200 relative"
               >
-                <div className="relative aspect-[63/88] bg-space-800">
+                <div className="relative bg-space-800">
                   {card.image_url ? (
                     <Image
                       src={card.image_url}

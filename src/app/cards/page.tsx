@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
+import { cardAspect } from "@/lib/cardUtils";
 import SearchBar from "./SearchBar";
 import FiltersBar from "./FiltersBar";
 import type { Prisma } from "@prisma/client";
@@ -102,7 +103,7 @@ export default async function CardsPage({ searchParams }: Props) {
               href={`/cards/${card.id}`}
               className="group holo-card rounded-xl overflow-hidden bg-space-900 border border-space-700 hover:border-holo hover:glow-holo transition-all duration-200"
             >
-              <div className="relative aspect-[63/88] bg-space-800">
+              <div className={`relative ${cardAspect(card.type)} bg-space-800`}>
                 {card.image_url ? (
                   <Image
                     src={card.image_url}

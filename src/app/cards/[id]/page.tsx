@@ -5,6 +5,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import CollectionButton from "./CollectionButton";
 import AddToDeckButton from "./AddToDeckButton";
+import LeaderFlip from "./LeaderFlip";
+import { cardAspect } from "@/lib/cardUtils";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -45,10 +47,12 @@ export default async function CardDetailPage({ params }: Props) {
 
   const versions = await prisma.card.findMany({
     where: { name: card.name, id: { not: card.id } },
-    select: { id: true, name: true, set_code: true, image_url: true },
+    select: { id: true, name: true, set_code: true, type: true, image_url: true },
     take: 8,
   });
 
+  const heroAspect = cardAspect(card.type);
+  const isLandscape = heroAspect === "aspect-[400/286]";
   const raw      = card.raw_data as Record<string, unknown>;
   const aspects  = Array.isArray(raw.aspects)  ? (raw.aspects  as string[]) : [];
   const traits   = Array.isArray(raw.traits)   ? (raw.traits   as string[]) : [];
@@ -63,68 +67,74 @@ export default async function CardDetailPage({ params }: Props) {
         ← Archive
       </Link>
 
-      {/* Hero */}
-      <div className="flex gap-4 mb-6">
-        <div className="holo-card relative w-36 shrink-0 rounded-xl overflow-hidden bg-space-800 border border-space-700 aspect-[63/88]">
-          {card.image_url ? (
-            <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-space-700 text-xs">—</div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 min-w-0 pt-1">
-          <div>
-            <p className="text-[10px] tracking-[0.2em] text-holo-dim uppercase mb-0.5">
-              {card.set?.name ?? card.set_code}
-            </p>
-            <h1 className="font-[family-name:var(--font-rajdhani)] text-xl font-bold text-sand leading-tight">
-              {card.name}
-            </h1>
-            {!!raw.subtitle && (
-              <p className="text-xs text-sand-dim mt-0.5 italic">{String(raw.subtitle)}</p>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-xs px-2 py-0.5 rounded border border-space-700 text-sand-dim">{card.type}</span>
-            <span className={`text-xs px-2 py-0.5 rounded border font-medium ${RARITY_STYLE[card.rarity] ?? "border-space-700 text-sand-dim"}`}>
-              {card.rarity}
-            </span>
-          </div>
-
-          <div className="flex gap-3 text-sm">
-            {raw.cost !== undefined && (
-              <div className="text-center">
-                <p className="text-[10px] text-sand-dim uppercase tracking-wider">Coût</p>
-                <p className="font-bold text-holo">{String(raw.cost)}</p>
-              </div>
-            )}
-            {raw.power !== undefined && (
-              <div className="text-center">
-                <p className="text-[10px] text-sand-dim uppercase tracking-wider">Force</p>
-                <p className="font-bold text-burn">{String(raw.power)}</p>
-              </div>
-            )}
-            {raw.hp !== undefined && (
-              <div className="text-center">
-                <p className="text-[10px] text-sand-dim uppercase tracking-wider">PV</p>
-                <p className="font-bold text-emerald-400">{String(raw.hp)}</p>
-              </div>
-            )}
-          </div>
-
-          {aspects.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {aspects.map((a) => (
-                <span key={a} className="text-[10px] px-1.5 py-0.5 rounded bg-space-800 border border-holo/20 text-holo">
-                  {a}
-                </span>
-              ))}
-            </div>
-          )}
+      {/* Meta commune (nom, set, badges) */}
+      <div className="mb-4">
+        <p className="text-[10px] tracking-[0.2em] text-holo-dim uppercase mb-0.5">
+          {card.set?.name ?? card.set_code}
+        </p>
+        <h1 className="font-[family-name:var(--font-rajdhani)] text-2xl font-bold text-sand leading-tight">
+          {card.name}
+        </h1>
+        {!!raw.subtitle && (
+          <p className="text-xs text-sand-dim mt-0.5 italic">{String(raw.subtitle)}</p>
+        )}
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          <span className="text-xs px-2 py-0.5 rounded border border-space-700 text-sand-dim">{card.type}</span>
+          <span className={`text-xs px-2 py-0.5 rounded border font-medium ${RARITY_STYLE[card.rarity] ?? "border-space-700 text-sand-dim"}`}>
+            {card.rarity}
+          </span>
         </div>
       </div>
+
+      {/* Leader : flip recto/verso + epic action */}
+      {card.type === "Leader" && raw.back_image_url && raw.epic_action ? (
+        <LeaderFlip
+          frontUrl={card.image_url!}
+          backUrl={String(raw.back_image_url)}
+          name={card.name}
+          epicAction={String(raw.epic_action)}
+        />
+      ) : (
+        /* Autres cartes : image + stats côte à côte */
+        <div className="flex gap-4 mb-6">
+          <div className={`holo-card relative shrink-0 rounded-xl overflow-hidden bg-space-800 border border-space-700 ${isLandscape ? "w-52" : "w-36"} ${heroAspect}`}>
+            {card.image_url ? (
+              <Image src={card.image_url} alt={card.name} fill className="object-cover" unoptimized />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-space-700 text-xs">—</div>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 min-w-0 pt-1">
+            <div className="flex gap-3 text-sm">
+              {raw.cost !== undefined && (
+                <div className="text-center">
+                  <p className="text-[10px] text-sand-dim uppercase tracking-wider">Coût</p>
+                  <p className="font-bold text-holo">{String(raw.cost)}</p>
+                </div>
+              )}
+              {raw.power !== undefined && (
+                <div className="text-center">
+                  <p className="text-[10px] text-sand-dim uppercase tracking-wider">Force</p>
+                  <p className="font-bold text-burn">{String(raw.power)}</p>
+                </div>
+              )}
+              {raw.hp !== undefined && (
+                <div className="text-center">
+                  <p className="text-[10px] text-sand-dim uppercase tracking-wider">PV</p>
+                  <p className="font-bold text-emerald-400">{String(raw.hp)}</p>
+                </div>
+              )}
+            </div>
+            {aspects.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {aspects.map((a) => (
+                  <span key={a} className="text-[10px] px-1.5 py-0.5 rounded bg-space-800 border border-holo/20 text-holo">{a}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Card text */}
       {(!!raw.front_text || !!raw.back_text) && (
@@ -184,22 +194,21 @@ export default async function CardDetailPage({ params }: Props) {
             Autres versions ({versions.length})
           </p>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {versions.map((v) => (
-              <Link
-                key={v.id}
-                href={`/cards/${v.id}`}
-                className="shrink-0 group"
-              >
-                <div className="relative w-20 rounded-lg overflow-hidden bg-space-800 border border-space-700 hover:border-holo aspect-[63/88] transition-all duration-150">
-                  {v.image_url ? (
-                    <Image src={v.image_url} alt={v.name} fill className="object-cover group-hover:scale-105 transition-transform duration-200" unoptimized sizes="80px" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-space-700 text-[10px]">—</div>
-                  )}
-                </div>
-                <p className="text-[10px] text-sand-dim text-center mt-1 group-hover:text-holo transition-colors">{v.set_code}</p>
-              </Link>
-            ))}
+            {versions.map((v) => {
+              const vLandscape = v.type === "Leader" || v.type === "Base";
+              return (
+                <Link key={v.id} href={`/cards/${v.id}`} className="shrink-0 group">
+                  <div className={`relative rounded-lg overflow-hidden bg-space-800 border border-space-700 hover:border-holo transition-all duration-150 ${vLandscape ? "w-28 aspect-[400/286]" : "w-20 aspect-[287/400]"}`}>
+                    {v.image_url ? (
+                      <Image src={v.image_url} alt={v.name} fill className="object-cover group-hover:scale-105 transition-transform duration-200" unoptimized sizes="112px" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-space-700 text-[10px]">—</div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-sand-dim text-center mt-1 group-hover:text-holo transition-colors">{v.set_code}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

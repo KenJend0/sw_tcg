@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { cardAspect } from "@/lib/cardUtils";
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -103,7 +104,7 @@ export default async function SetCollectionPage({ params }: Props) {
                       : "bg-space-950 border-space-800 opacity-40 hover:opacity-60"
                   }`}
                 >
-                  <div className="relative aspect-[63/88] bg-space-800">
+                  <div className={`relative ${cardAspect(card.type)} bg-space-800`}>
                     {card.image_url ? (
                       <Image
                         src={card.image_url}
