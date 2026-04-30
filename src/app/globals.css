@@ -1,29 +1,107 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700&display=swap");
 
+/* ── Design tokens ─────────────────────────────────────── */
+@theme {
+  --color-space-950: #0D1321;
+  --color-space-900: #1D2D44;
+  --color-space-800: #253552;
+  --color-space-700: #2E4068;
+  --color-sand:      #F0EBD8;
+  --color-sand-dim:  #9A9080;
+  --color-holo:      #5BC0EB;
+  --color-holo-dim:  #2E7FA8;
+  --color-burn:      #F77F00;
+  --color-void:      #7B2CBF;
+  --color-alert:     #D62828;
+  --font-rajdhani:   "Rajdhani", sans-serif;
+  --font-orbitron:   "Orbitron", sans-serif;
+}
+
+/* ── Base ───────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0D1321;
+  --foreground: #F0EBD8;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", "Geist Sans", system-ui, sans-serif;
 }
 
+/* ── Scrollbar ──────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Holographic scan line ──────────────────────────────── */
+@keyframes holo-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+.holo-card {
+  position: relative;
+  overflow: hidden;
+}
+.holo-card::before {
+  content: "";
+  position: absolute;
+  inset-x: 0;
+  top: 0;
+  height: 40%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(91, 192, 235, 0.08),
+    transparent
+  );
+  animation: holo-scan 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.holo-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(91, 192, 235, 0.015) 3px,
+    rgba(91, 192, 235, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Glow ───────────────────────────────────────────────── */
+.glow-holo {
+  box-shadow: 0 0 12px rgba(91, 192, 235, 0.3), 0 0 2px rgba(91, 192, 235, 0.5);
+}
+.glow-burn {
+  box-shadow: 0 0 12px rgba(247, 127, 0, 0.3), 0 0 2px rgba(247, 127, 0, 0.5);
+}
+
+/* ── Skeleton pulse ─────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.7; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1D2D44, #253552, #1D2D44);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+/* ── Fade-in ────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fade-in 0.25s ease-out both;
+}

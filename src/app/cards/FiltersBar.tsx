@@ -2,17 +2,17 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-const TYPES = ["Leader", "Base", "Unit", "Event", "Upgrade"];
+const TYPES    = ["Leader", "Base", "Unit", "Event", "Upgrade"];
 const RARITIES = ["Common", "Uncommon", "Rare", "Legendary", "Special"];
-const ASPECTS = ["Aggression", "Command", "Cunning", "Vigilance", "Villainy", "Heroism"];
+const ASPECTS  = ["Aggression", "Command", "Cunning", "Vigilance", "Villainy", "Heroism"];
 
-const ASPECT_COLOR: Record<string, string> = {
-  Aggression: "bg-red-900 text-red-200 border-red-700",
-  Command:    "bg-green-900 text-green-200 border-green-700",
-  Cunning:    "bg-yellow-900 text-yellow-200 border-yellow-700",
-  Vigilance:  "bg-blue-900 text-blue-200 border-blue-700",
-  Villainy:   "bg-zinc-800 text-zinc-200 border-zinc-600",
-  Heroism:    "bg-white/10 text-zinc-100 border-zinc-400",
+const ASPECT_STYLE: Record<string, string> = {
+  Aggression: "border-red-600/60 text-red-400 bg-red-950/40",
+  Command:    "border-emerald-600/60 text-emerald-400 bg-emerald-950/40",
+  Cunning:    "border-yellow-600/60 text-yellow-400 bg-yellow-950/40",
+  Vigilance:  "border-holo/60 text-holo bg-holo/10",
+  Villainy:   "border-sand-dim/40 text-sand-dim bg-space-800/60",
+  Heroism:    "border-sand/30 text-sand bg-space-800/60",
 };
 
 type Props = {
@@ -28,71 +28,49 @@ export default function FiltersBar({ sets, active }: Props) {
   function toggle(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("page");
-    if (params.get(key) === value) {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
+    if (params.get(key) === value) params.delete(key);
+    else params.set(key, value);
     router.replace(`${pathname}?${params.toString()}`);
   }
 
   function clear() {
     const params = new URLSearchParams();
-    const search = searchParams.get("search");
-    if (search) params.set("search", search);
+    const s = searchParams.get("search");
+    if (s) params.set("search", s);
     router.replace(`${pathname}?${params.toString()}`);
   }
 
   const hasActive = !!(active.set || active.type || active.rarity || active.aspect);
 
+  const chip = (key: string, value: string, activeStyle?: string) => {
+    const isActive = (active as Record<string, string>)[key] === value;
+    return (
+      <button
+        key={value}
+        onClick={() => toggle(key, value)}
+        className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150 ${
+          isActive
+            ? activeStyle ?? "bg-holo text-space-950 border-holo"
+            : "bg-space-900 text-sand-dim border-space-700 hover:border-holo/50 hover:text-sand"
+        }`}
+      >
+        {value}
+      </button>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-2 mb-4">
       {/* Sets */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {sets.map((s) => (
-          <button
-            key={s.code}
-            onClick={() => toggle("set", s.code)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-              active.set === s.code
-                ? "bg-yellow-400 text-zinc-950 border-yellow-400"
-                : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500"
-            }`}
-          >
-            {s.code}
-          </button>
-        ))}
+        {sets.map((s) => chip("set", s.code))}
       </div>
 
       {/* Type + Rarity */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {TYPES.map((t) => (
-          <button
-            key={t}
-            onClick={() => toggle("type", t)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-              active.type === t
-                ? "bg-yellow-400 text-zinc-950 border-yellow-400"
-                : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-        <div className="w-px shrink-0 bg-zinc-700 mx-1" />
-        {RARITIES.map((r) => (
-          <button
-            key={r}
-            onClick={() => toggle("rarity", r)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-              active.rarity === r
-                ? "bg-yellow-400 text-zinc-950 border-yellow-400"
-                : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500"
-            }`}
-          >
-            {r}
-          </button>
-        ))}
+        {TYPES.map((t) => chip("type", t))}
+        <div className="w-px shrink-0 bg-space-700 mx-1" />
+        {RARITIES.map((r) => chip("rarity", r))}
       </div>
 
       {/* Aspects */}
@@ -101,10 +79,10 @@ export default function FiltersBar({ sets, active }: Props) {
           <button
             key={a}
             onClick={() => toggle("aspect", a)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition-all duration-150 ${
               active.aspect === a
-                ? ASPECT_COLOR[a]
-                : "bg-zinc-900 text-zinc-400 border-zinc-700 hover:border-zinc-500"
+                ? ASPECT_STYLE[a]
+                : "bg-space-900 text-sand-dim border-space-700 hover:border-holo/50 hover:text-sand"
             }`}
           >
             {a}
@@ -115,7 +93,7 @@ export default function FiltersBar({ sets, active }: Props) {
       {hasActive && (
         <button
           onClick={clear}
-          className="self-start text-xs text-zinc-500 hover:text-yellow-400 transition-colors"
+          className="self-start text-xs text-sand-dim hover:text-holo transition-colors duration-150"
         >
           ✕ Effacer les filtres
         </button>

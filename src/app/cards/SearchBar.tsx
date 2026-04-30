@@ -6,7 +6,7 @@ import { useTransition } from "react";
 export default function SearchBar({ defaultValue }: { defaultValue: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;
@@ -18,12 +18,22 @@ export default function SearchBar({ defaultValue }: { defaultValue: string }) {
   }
 
   return (
-    <input
-      type="search"
-      defaultValue={defaultValue}
-      onChange={handleChange}
-      placeholder="Rechercher une carte..."
-      className="w-full rounded-xl bg-zinc-800 px-4 py-3 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:ring-2 focus:ring-yellow-400"
-    />
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-holo-dim text-sm select-none">
+        ⌕
+      </span>
+      <input
+        type="search"
+        defaultValue={defaultValue}
+        onChange={handleChange}
+        placeholder="Rechercher une carte..."
+        className={`w-full rounded-xl bg-space-900 border pl-8 pr-4 py-3 text-sm text-sand placeholder-sand-dim outline-none focus:border-holo focus:ring-1 focus:ring-holo/30 transition-all duration-150 ${
+          isPending ? "border-holo/40" : "border-space-700"
+        }`}
+      />
+      {isPending && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-holo border-t-transparent animate-spin" />
+      )}
+    </div>
   );
 }

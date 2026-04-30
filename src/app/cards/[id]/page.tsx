@@ -5,16 +5,14 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import CollectionButton from "./CollectionButton";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
+type Props = { params: Promise<{ id: string }> };
 
-const RARITY_COLOR: Record<string, string> = {
-  Common: "bg-zinc-600 text-zinc-200",
-  Uncommon: "bg-emerald-800 text-emerald-200",
-  Rare: "bg-blue-800 text-blue-200",
-  Legendary: "bg-yellow-700 text-yellow-200",
-  Special: "bg-purple-800 text-purple-200",
+const RARITY_STYLE: Record<string, string> = {
+  Common:    "border-sand-dim/30 text-sand-dim",
+  Uncommon:  "border-emerald-500/40 text-emerald-400",
+  Rare:      "border-holo/40 text-holo",
+  Legendary: "border-burn/50 text-burn",
+  Special:   "border-void/50 text-violet-400",
 };
 
 export default async function CardDetailPage({ params }: Props) {
@@ -33,18 +31,22 @@ export default async function CardDetailPage({ params }: Props) {
   if (!card) notFound();
 
   const raw = card.raw_data as Record<string, unknown>;
+  const aspects  = Array.isArray(raw.aspects)  ? (raw.aspects  as string[]) : [];
+  const traits   = Array.isArray(raw.traits)   ? (raw.traits   as string[]) : [];
+  const keywords = Array.isArray(raw.keywords) ? (raw.keywords as string[]) : [];
 
   return (
-    <div className="max-w-lg mx-auto px-3 py-4">
+    <div className="max-w-lg mx-auto px-3 py-4 fade-in">
       <Link
         href="/cards"
-        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-yellow-400 mb-4 transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs text-sand-dim hover:text-holo mb-5 transition-colors duration-150 tracking-wider uppercase"
       >
-        ← Retour
+        ← Archive
       </Link>
 
-      <div className="flex gap-4">
-        <div className="relative w-36 shrink-0 rounded-xl overflow-hidden bg-zinc-800 aspect-[63/88]">
+      {/* Hero section */}
+      <div className="flex gap-4 mb-6">
+        <div className="holo-card relative w-36 shrink-0 rounded-xl overflow-hidden bg-space-800 border border-space-700 aspect-[63/88]">
           {card.image_url ? (
             <Image
               src={card.image_url}
@@ -54,80 +56,105 @@ export default async function CardDetailPage({ params }: Props) {
               unoptimized
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-xs">
-              No image
+            <div className="absolute inset-0 flex items-center justify-center text-space-700 text-xs">
+              —
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-2 min-w-0">
-          <h1 className="text-lg font-bold text-yellow-400 leading-tight">
-            {card.name}
-          </h1>
-          {!!raw.subtitle && (
-            <p className="text-sm text-zinc-400 -mt-1">{String(raw.subtitle)}</p>
-          )}
+        <div className="flex flex-col gap-2 min-w-0 pt-1">
+          <div>
+            <p className="text-[10px] tracking-[0.2em] text-holo-dim uppercase mb-0.5">
+              {card.set?.name ?? card.set_code}
+            </p>
+            <h1 className="font-[family-name:var(--font-rajdhani)] text-xl font-bold text-sand leading-tight">
+              {card.name}
+            </h1>
+            {!!raw.subtitle && (
+              <p className="text-xs text-sand-dim mt-0.5 italic">{String(raw.subtitle)}</p>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
-            <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
+            <span className="text-xs px-2 py-0.5 rounded border border-space-700 text-sand-dim">
               {card.type}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${RARITY_COLOR[card.rarity] ?? "bg-zinc-700 text-zinc-300"}`}>
+            <span className={`text-xs px-2 py-0.5 rounded border font-medium ${RARITY_STYLE[card.rarity] ?? "border-space-700 text-sand-dim"}`}>
               {card.rarity}
             </span>
           </div>
-          <p className="text-sm text-zinc-400">
-            <span className="text-zinc-500">Set </span>
-            {card.set?.name ?? card.set_code}
-          </p>
-          {raw.cost !== undefined && (
-            <p className="text-sm text-zinc-300">
-              <span className="text-zinc-500">Coût </span>{String(raw.cost)}
-            </p>
-          )}
-          {raw.power !== undefined && raw.hp !== undefined && (
-            <p className="text-sm text-zinc-300">
-              <span className="text-zinc-500">Force / PV </span>
-              {String(raw.power)} / {String(raw.hp)}
-            </p>
+
+          <div className="flex gap-3 text-sm">
+            {raw.cost !== undefined && (
+              <div className="text-center">
+                <p className="text-[10px] text-sand-dim uppercase tracking-wider">Coût</p>
+                <p className="font-bold text-holo">{String(raw.cost)}</p>
+              </div>
+            )}
+            {raw.power !== undefined && (
+              <div className="text-center">
+                <p className="text-[10px] text-sand-dim uppercase tracking-wider">Force</p>
+                <p className="font-bold text-burn">{String(raw.power)}</p>
+              </div>
+            )}
+            {raw.hp !== undefined && (
+              <div className="text-center">
+                <p className="text-[10px] text-sand-dim uppercase tracking-wider">PV</p>
+                <p className="font-bold text-emerald-400">{String(raw.hp)}</p>
+              </div>
+            )}
+          </div>
+
+          {aspects.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {aspects.map((a) => (
+                <span key={a} className="text-[10px] px-1.5 py-0.5 rounded bg-space-800 border border-holo/20 text-holo">
+                  {a}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
+      {/* Card text */}
       {(!!raw.front_text || !!raw.back_text) && (
-        <div className="mt-4 rounded-xl bg-zinc-900 border border-zinc-800 p-4">
+        <div className="rounded-xl bg-space-900 border border-space-700 p-4 mb-3 relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-holo/30 to-transparent" />
           {!!raw.front_text && (
-            <p className="text-sm text-zinc-300 whitespace-pre-line">{String(raw.front_text)}</p>
+            <p className="text-sm text-sand/80 whitespace-pre-line leading-relaxed">
+              {String(raw.front_text)}
+            </p>
           )}
           {!!raw.back_text && (
-            <p className="text-sm text-zinc-400 whitespace-pre-line mt-2">{String(raw.back_text)}</p>
+            <p className="text-sm text-sand-dim whitespace-pre-line mt-2 leading-relaxed">
+              {String(raw.back_text)}
+            </p>
           )}
         </div>
       )}
 
-      {Array.isArray(raw.aspects) && raw.aspects.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {(raw.aspects as string[]).map((a) => (
-            <span key={a} className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">
-              {a}
+      {/* Traits + Keywords */}
+      {(traits.length > 0 || keywords.length > 0) && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {traits.map((t) => (
+            <span key={t} className="text-[10px] px-2 py-0.5 rounded border border-space-700 text-sand-dim">
+              {t}
             </span>
           ))}
-        </div>
-      )}
-
-      {Array.isArray(raw.traits) && raw.traits.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {(raw.traits as string[]).map((t) => (
-            <span key={t} className="text-xs bg-zinc-800/50 text-zinc-400 px-2 py-0.5 rounded-full border border-zinc-700">
-              {t}
+          {keywords.map((k) => (
+            <span key={k} className="text-[10px] px-2 py-0.5 rounded bg-burn/10 border border-burn/30 text-burn">
+              {k}
             </span>
           ))}
         </div>
       )}
 
       {!!raw.artist && (
-        <p className="mt-4 text-xs text-zinc-600">Illustration : {String(raw.artist)}</p>
+        <p className="text-[10px] text-space-700 mb-4">Illustration : {String(raw.artist)}</p>
       )}
 
+      {/* Collection button */}
       {session?.user ? (
         <CollectionButton
           cardId={card.id}
@@ -137,7 +164,7 @@ export default async function CardDetailPage({ params }: Props) {
       ) : (
         <Link
           href="/login"
-          className="block w-full mt-4 rounded-xl border border-zinc-700 text-zinc-400 text-sm text-center py-3 hover:border-yellow-400 hover:text-yellow-400 transition-colors"
+          className="block w-full rounded-xl border border-space-700 text-sand-dim text-sm text-center py-3 hover:border-holo hover:text-holo transition-all duration-150"
         >
           Connecte-toi pour gérer ta collection
         </Link>

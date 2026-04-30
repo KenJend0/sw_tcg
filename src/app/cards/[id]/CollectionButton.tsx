@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Props = {
-  cardId: string;
-  inCollection: boolean;
-  quantity: number;
-};
+type Props = { cardId: string; inCollection: boolean; quantity: number };
 
 export default function CollectionButton({ cardId, inCollection, quantity }: Props) {
   const router = useRouter();
@@ -51,30 +47,31 @@ export default function CollectionButton({ cardId, inCollection, quantity }: Pro
       <button
         onClick={add}
         disabled={loading}
-        className="w-full mt-4 rounded-xl bg-yellow-400 text-zinc-950 font-semibold py-3 text-sm hover:bg-yellow-300 disabled:opacity-50 transition-colors"
+        className="w-full rounded-xl bg-holo text-space-950 font-semibold py-3 text-sm hover:bg-holo-dim disabled:opacity-50 transition-all duration-150 active:scale-[0.98] glow-holo"
       >
-        + Ajouter à ma collection
+        {loading ? "..." : "+ Ajouter à ma collection"}
       </button>
     );
   }
 
   return (
-    <div className="mt-4 flex items-center justify-between bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3">
-      <span className="text-sm text-zinc-300">
-        Dans ma collection : <span className="font-bold text-yellow-400">{qty}</span>
-      </span>
+    <div className="flex items-center justify-between bg-space-900 border border-holo/30 rounded-xl px-4 py-3">
+      <div>
+        <p className="text-[10px] text-sand-dim uppercase tracking-wider mb-0.5">Collection</p>
+        <p className="text-sm font-bold text-holo">{qty} exemplaire{qty > 1 ? "s" : ""}</p>
+      </div>
       <div className="flex items-center gap-2">
         <button
           onClick={remove}
           disabled={loading}
-          className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold disabled:opacity-50 transition-colors"
+          className="w-9 h-9 rounded-lg bg-space-800 border border-space-700 hover:border-holo text-sand-dim font-bold disabled:opacity-50 transition-all duration-150"
         >
           −
         </button>
         <button
           onClick={add}
           disabled={loading}
-          className="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold disabled:opacity-50 transition-colors"
+          className="w-9 h-9 rounded-lg bg-space-800 border border-space-700 hover:border-holo text-sand-dim font-bold disabled:opacity-50 transition-all duration-150"
         >
           +
         </button>
